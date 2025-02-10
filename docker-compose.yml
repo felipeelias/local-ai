@@ -1,0 +1,115 @@
+services:
+  ollama:
+    image: ollama/ollama:0.5.7
+    ports:
+      - 11434:11434
+    networks:
+      - ai
+    volumes:
+      - ollama:/root/.ollama
+      - ./modelfiles:/root/modelfiles
+    environment:
+      - OLLAMA_ORIGINS="vscode-file://*"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ "gpu" ]
+              count: all
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:cuda
+    ports:
+      - 3002:8080
+    networks:
+      - ai
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - ENABLE_OPENAI_API=False
+      - ENABLE_RAG_WEB_SEARCH=True
+      - RAG_WEB_SEARCH_ENGINE=duckduckgo
+      - ENABLE_IMAGE_GENERATION=True
+      - IMAGE_GENERATION_ENGINE=comfyui
+      - COMFYUI_BASE_URL=http://comfyui:8188
+      - COMFYUI_API_KEY=comfyui
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ "gpu" ]
+              count: all
+
+  comfyui:
+    image: ghcr.io/felipeelias/comfy-ui:comfyui-0.3.14-comfyui-manager-3.18.1
+    ports:
+      - 8188:8188
+    networks:
+      - ai
+    volumes:
+      - comfyui-checkpoints:/app/models/checkpoints
+      - comfyui-vae:/app/models/vae
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ "gpu" ]
+              count: all
+
+  curxy:
+    build:
+      context: curxy
+      dockerfile: Dockerfile
+    ports:
+      - 62192:62192
+    networks:
+      - ai
+
+  nginx:
+    image: nginx:1.27
+    ports:
+      - 8080:8080
+    networks:
+      - ai
+    volumes:
+      - ./config/nginx:/etc/nginx/conf.d
+    depends_on:
+      - ollama
+      - open-webui
+      - comfyui
+      - curxy
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    ports:
+      - 4040:4040
+    networks:
+      - ai
+    volumes:
+      - ./config/ngrok/ngrok.yml:/etc/ngrok.yml
+    depends_on:
+      - nginx
+
+networks:
+  ai:
+    driver: bridge
+
+volumes:
+  ollama:
+    external: true
+  open-webui:
+    external: true
+  comfyui-checkpoints:
+    external: true
+  comfyui-vae:
+    external: true
