@@ -9,7 +9,7 @@ It includes the following basic services:
 - [Ollama](https://github.com/ollama/ollama) as the LLM provider
 - [Open WebUI](https://github.com/open-webui/open-webui), a browser-based AI platform
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI), for image generation, integrated with Open WebUI
-- [ngrok](https://ngrok.com/), for your services to be accessible from the internet
+- [ngrok](https://ngrok.com/), enable internet access and Cursor integration
 
 It's also possible to integrate this with Cursor or VSCode, via [continue.dev](https://continue.dev/).
 
